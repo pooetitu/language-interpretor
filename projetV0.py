@@ -1,4 +1,4 @@
-#from genereTreeGraphviz2 import printTreeGraph
+from genereTreeGraphviz2 import printTreeGraph
 
 reserved = {
    'if' : 'IF',
@@ -6,13 +6,14 @@ reserved = {
    'while' : 'WHILE',
    'for' : 'FOR',
    'fonctionValue' : "FONCTION_VALUE",
-   'fonctionVoid' : "FONCTION_VOID"
+   'fonctionVoid' : "FONCTION_VOID",
+   'return' : 'RETURN'
    }
 
 tokens = [
     'NAME','NUMBER',
     'PLUS', 'MINUS', 'TIMES', 'DIVIDE', 'EQUALS', 
-    'LPAREN','RPAREN', 'LBRACKET','RBRACKET', 'COLON', 'AND', 'OR', 'EQUAL', 'LOWER','HIGHER',
+    'LPAREN','RPAREN', 'LBRACKET','RBRACKET', 'COLON', 'COMMA', 'AND', 'OR', 'EQUAL', 'LOWER','HIGHER',
     ]+list(reserved.values())
 
 # Tokens
@@ -31,6 +32,7 @@ t_RPAREN  = r'\)'
 t_LBRACKET  = r'\{'
 t_RBRACKET  = r'\}'
 t_COLON = r';'
+t_COMMA = r','
 t_AND  = r'\&'
 t_OR  = r'\|'
 t_EQUAL  = r'=='
@@ -76,7 +78,7 @@ def p_start(t):
     ''' start : linst'''
     t[0] = ('start',t[1])
     print(t[0])
-    #printTreeGraph(t[0])
+    printTreeGraph(t[0])
     #eval(t[1])
     eval_inst(t[1])
     
@@ -88,7 +90,30 @@ def p_line(t):
     else:
         t[0] = ('bloc',t[1], 'empty')
     
+def p_params(t):
+    '''params : NAME COMMA params
+        | NAME '''
+    if len(t) == 4 :
+        t[0] = ('param', t[1], t[3])
+    else:
+        t[0] = ('param', t[1])
 
+
+def p_function_call_params(t):
+    '''call_params : expression COMMA call_params 
+        | expression'''
+    if len(t) == 4 :
+        t[0] = ('param', t[1], t[3])
+    else:
+        t[0] = ('param', t[1])
+
+def p_statement_function_value_definition(t):
+    'inst : FONCTION_VALUE NAME LPAREN params RPAREN LBRACKET linst RBRACKET'
+    t[0] = ('function_value', t[2], t[4], t[7])
+
+def p_statement_function_void_definition(t):
+    'inst : FONCTION_VOID NAME LPAREN params RPAREN LBRACKET linst RETURN COLON RBRACKET'
+    t[0] = ('function_void', t[2], t[4], t[7])
 
 def p_statement_if(t):
     'inst : IF LPAREN expression RPAREN LBRACKET linst RBRACKET'
@@ -102,6 +127,10 @@ def p_statement_for(t):
     'inst : FOR LPAREN inst expression COLON inst RPAREN LBRACKET linst RBRACKET'
     t[0] = ('for', t[3], t[4], t[6], t[9])
 
+
+def p_function_call(t):
+    '''inst : NAME LPAREN call_params RPAREN COLON'''
+    t[0] = ('function_call', t[1], t[3])
 
 def p_statement_assign(t):
     'inst : NAME EQUALS expression COLON'
@@ -161,14 +190,11 @@ def p_expression_group(t):
 
 def p_expression_number(t):
     'expression : NUMBER'
-    
     t[0] = t[1]
 
 def p_expression_name(t):
     'expression : NAME'
-
     t[0] = t[1]
-
 
 def p_error(t):
     print("Syntax error at '%s'" % t.value)
@@ -205,6 +231,10 @@ def eval_inst(tree):
         names[tree[1]]+=tree[2]
     elif tree[0] == "minus_equals":
         names[tree[1]]-=tree[2]
+    elif tree[0] == "fonction_void" or tree[0] == "fonction_value":
+        functions[tree[1]] = tree[0]
+    elif tree[0] == "function_call":
+        print("a")
     elif tree != "empty":
         eval_expr(tree)
 
@@ -240,9 +270,9 @@ import ply.yacc as yacc
 parser = yacc.yacc()
 
 #s='1+2;x=4 if ;x=x+1;'
-s='for(i=0;i<4;i++;){print(i*i);}'
-#s='max=20;count=0;i=0;j=1;while(count<max)then;count++;print(i);tmp=j+i;i=j;j=tmp;end;'
-
+#s='for(i=0;i<4;i++;){print(i*i);}'# boucle for et incrementation
+#s='max=20;count=0;i=0;j=1;while(count<max)then;count++;print(i);tmp=j+i;i=j;j=tmp;end;' # fibonnacci boucle while
+s='fonctionVoid naame(a,b){print(a); print(a+b);}print(5);naame(1,2);'
 #with open("1.in") as file: # Use file to refer to the file object
 
    #s = file.read()
