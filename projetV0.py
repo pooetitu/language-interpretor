@@ -108,8 +108,12 @@ def p_function_call_params(t):
         t[0] = ('param', t[1])
 
 def p_statement_function_value_definition(t):
-    'inst : FONCTION_VALUE NAME LPAREN params RPAREN LBRACKET linst RETURN expression COLON RBRACKET'
-    t[0] = ('function_value', t[2], t[4], t[7], t[9])
+    '''inst : FONCTION_VALUE NAME LPAREN params RPAREN LBRACKET RETURN expression COLON RBRACKET
+        | FONCTION_VALUE NAME LPAREN params RPAREN LBRACKET linst RETURN expression COLON RBRACKET'''
+    if len(t) <=11:
+        t[0] = ('function_value', t[2], t[4], "empty", t[8])
+    else:
+        t[0] = ('function_value', t[2], t[4], t[7], t[9])
 
 def p_statement_function_void_definition(t):
     'inst : FONCTION_VOID NAME LPAREN params RPAREN LBRACKET linst RBRACKET'
@@ -272,8 +276,16 @@ def eval_expr(tree):
             functions_scope_stack.append({})
             load_function_params(tree, functions_value[tree[1]])
             eval_inst(functions_value[tree[1]][3])
+            return_value = eval_expr(functions_value[tree[1]][4])
             functions_scope_stack.pop()
-            return eval_expr()
+            return return_value
+        elif tree[0] == "function_value_bodyless":
+            functions_scope_stack.append({})
+            load_function_params(tree, functions_value[tree[1]])
+            eval_inst(functions_value[tree[1]][3])
+            return_value = eval_expr(functions_value[tree[1]][4])
+            functions_scope_stack.pop()
+            return return_value
     elif type(tree) == str:
         return get_variable_reference(tree)[tree]
     elif type(tree) == int:
@@ -303,7 +315,8 @@ parser = yacc.yacc()
 #s='1+2;x=4 if ;x=x+1;'
 #s='for(i=0;i<4;i++;){print(i*i);}'# boucle for et incrementation
 #s='max=20;count=0;i=0;j=1;while(count<max)then;count++;print(i);tmp=j+i;i=j;j=tmp;end;' # fibonnacci boucle while
-s='functionVoid naame(a,b){print(a); print(a+b);}naame(1,2);' # void function
+#s='functionVoid voidFunction(a,b){print(a); print(a+b);}voidFunction(1,2);' # void function
+s='functionValue valueFunction(a,b){print(1);return a+b;}print(valueFunction(1,2));' # value function
 #with open("1.in") as file: # Use file to refer to the file object
 
    #s = file.read()
