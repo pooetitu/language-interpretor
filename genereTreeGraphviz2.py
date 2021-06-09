@@ -26,10 +26,3 @@ def addNode(graph, t):
 
 
     return myId
-    
- 
-
-tree=('*', ('+', 1, 2, 4),3)
-tree=('a', ('b', 'c', 'd', 'f'),('e', 'g'))
-tree=('bloc', ('bloc', ('bloc', ('print',('+', 1, 2)), 'empty'), ('assign', 'x', 4)), ('assign', 'x', ('+', 'x', 1)))
-printTreeGraph(tree)
