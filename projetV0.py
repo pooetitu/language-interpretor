@@ -78,7 +78,7 @@ def p_start(t):
     ''' start : linst'''
     t[0] = ('start',t[1])
     print(t[0])
-    printTreeGraph(t[0])
+    #printTreeGraph(t[0])
     #eval(t[1])
     eval_inst(t[1])
     
@@ -108,11 +108,11 @@ def p_function_call_params(t):
         t[0] = ('param', t[1])
 
 def p_statement_function_value_definition(t):
-    'inst : FONCTION_VALUE NAME LPAREN params RPAREN LBRACKET linst RBRACKET'
-    t[0] = ('function_value', t[2], t[4], t[7])
+    'inst : FONCTION_VALUE NAME LPAREN params RPAREN LBRACKET linst RETURN expression COLON RBRACKET'
+    t[0] = ('function_value', t[2], t[4], t[7], t[9])
 
 def p_statement_function_void_definition(t):
-    'inst : FONCTION_VOID NAME LPAREN params RPAREN LBRACKET linst RETURN COLON RBRACKET'
+    'inst : FONCTION_VOID NAME LPAREN params RPAREN LBRACKET linst RBRACKET'
     t[0] = ('function_void', t[2], t[4], t[7])
 
 def p_statement_if(t):
@@ -272,7 +272,7 @@ parser = yacc.yacc()
 #s='1+2;x=4 if ;x=x+1;'
 #s='for(i=0;i<4;i++;){print(i*i);}'# boucle for et incrementation
 #s='max=20;count=0;i=0;j=1;while(count<max)then;count++;print(i);tmp=j+i;i=j;j=tmp;end;' # fibonnacci boucle while
-s='fonctionVoid naame(a,b){print(a); print(a+b);}print(5);naame(1,2);'
+s='fonctionVoid naame(a,b){print(a); print(a+b);}'
 #with open("1.in") as file: # Use file to refer to the file object
 
    #s = file.read()
