@@ -208,14 +208,14 @@ functions_scope_stack=[]
 names={}
 
 def eval_inst(tree):
-    print("evalInst de " + str(tree))
+    print("evalInst de " + str(tree)) 
     if tree[0] == "bloc":
         eval_inst(tree[1])
         eval_inst(tree[2])
     elif tree[0] == "print":
         print(eval_expr(tree[1]))
     elif tree[0] == "assign":
-        names[tree[1]]=eval_expr(tree[2])
+        get_variable_reference(tree[1])[tree[1]]=eval_expr(tree[2])
     elif tree[0] == "if":
         if eval_expr(tree[1]):
             eval_inst(tree[2])
@@ -228,13 +228,13 @@ def eval_inst(tree):
             eval_inst(tree[4])
             eval_inst(tree[3])
     elif tree[0] == "incr":
-        names[tree[1]]+=1
+        get_variable_reference(tree[1])[tree[1]]+=1
     elif tree[0] == "decr":
-        names[tree[1]]-=1
+        get_variable_reference(tree[1])[tree[1]]-=1
     elif tree[0] == "plus_equals":
-        names[tree[1]]+=tree[2]
+        get_variable_reference(tree[1])[tree[1]]+=tree[2]
     elif tree[0] == "minus_equals":
-        names[tree[1]]-=tree[2]
+        get_variable_reference(tree[1])[tree[1]]-=tree[2]
     elif tree[0] == "function_void":
         functions_void[tree[1]] = tree
     elif tree[0] == "function_value":
@@ -242,10 +242,7 @@ def eval_inst(tree):
     elif tree[0] == "function_void_call":
         functions_scope_stack.append({})
         load_function_params(tree, functions_void[tree[1]])
-        functions_scope_stack.pop()
-    elif tree[0] == "function_value_call":
-        functions_scope_stack.append({})
-        load_function_params(tree, functions_value[tree[1]])
+        eval_inst(functions_void[tree[1]][3])
         functions_scope_stack.pop()
     elif tree != "empty":
         eval_expr(tree)
@@ -271,10 +268,23 @@ def eval_expr(tree):
             return eval_expr(tree[1]) < eval_expr(tree[2])
         elif tree[0] == '==':
             return eval_expr(tree[1]) == eval_expr(tree[2])
+        elif tree[0] == "function_value_call":
+            functions_scope_stack.append({})
+            load_function_params(tree, functions_value[tree[1]])
+            eval_inst(functions_value[tree[1]][3])
+            functions_scope_stack.pop()
+            return eval_expr()
     elif type(tree) == str:
-        return names[tree]
+        return get_variable_reference(tree)[tree]
     elif type(tree) == int:
         return tree
+
+
+def get_variable_reference(key):
+    if key in names or len(functions_scope_stack) == 0:
+        return names
+    else:
+        return functions_scope_stack[len(functions_scope_stack)-1]
 
 
 def load_function_params(tree, function):
@@ -293,7 +303,7 @@ parser = yacc.yacc()
 #s='1+2;x=4 if ;x=x+1;'
 #s='for(i=0;i<4;i++;){print(i*i);}'# boucle for et incrementation
 #s='max=20;count=0;i=0;j=1;while(count<max)then;count++;print(i);tmp=j+i;i=j;j=tmp;end;' # fibonnacci boucle while
-s='functionVoid naame(a,b){print(a); print(a+b);}naame(1,2);'
+s='functionVoid naame(a,b){print(a); print(a+b);}naame(1,2);' # void function
 #with open("1.in") as file: # Use file to refer to the file object
 
    #s = file.read()
