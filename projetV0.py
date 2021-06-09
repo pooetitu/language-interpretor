@@ -127,11 +127,6 @@ def p_statement_for(t):
     'inst : FOR LPAREN inst expression COLON inst RPAREN LBRACKET linst RBRACKET'
     t[0] = ('for', t[3], t[4], t[6], t[9])
 
-
-def p_function_call(t):
-    '''inst : NAME LPAREN call_params RPAREN COLON'''
-    t[0] = ('function_call', t[1], t[3])
-
 def p_statement_assign(t):
     'inst : NAME EQUALS expression COLON'
     t[0] = ('assign', t[1], t[3])
@@ -156,6 +151,10 @@ def p_statement_plus_equal(t):
 def p_statement_minus_equal(t):
     'inst : NAME MINUS EQUALS expression COLON'
     t[0] = ('minus_equals', t[1], t[4])
+
+def p_statement_function_void_call(t):
+    '''inst : NAME LPAREN call_params RPAREN COLON'''
+    t[0] = ('function_void_call', t[1], t[3])
 
 
 #def p_statement_expr(t):
@@ -195,6 +194,10 @@ def p_expression_number(t):
 def p_expression_name(t):
     'expression : NAME'
     t[0] = t[1]
+
+def p_expression_function_value_call(t):
+    '''expression : NAME LPAREN call_params RPAREN'''
+    t[0] = ('function_value_call', t[1], t[3])
 
 def p_error(t):
     print("Syntax error at '%s'" % t.value)
@@ -272,7 +275,7 @@ parser = yacc.yacc()
 #s='1+2;x=4 if ;x=x+1;'
 #s='for(i=0;i<4;i++;){print(i*i);}'# boucle for et incrementation
 #s='max=20;count=0;i=0;j=1;while(count<max)then;count++;print(i);tmp=j+i;i=j;j=tmp;end;' # fibonnacci boucle while
-s='fonctionVoid naame(a,b){print(a); print(a+b);}'
+s='fonctionVoid naame(a,b){print(a); print(a+b);}naame(1,2);'
 #with open("1.in") as file: # Use file to refer to the file object
 
    #s = file.read()
