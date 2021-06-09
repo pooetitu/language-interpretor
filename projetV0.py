@@ -110,14 +110,18 @@ def p_function_call_params(t):
 def p_statement_function_value_definition(t):
     '''inst : FONCTION_VALUE NAME LPAREN params RPAREN LBRACKET RETURN expression COLON RBRACKET
         | FONCTION_VALUE NAME LPAREN params RPAREN LBRACKET linst RETURN expression COLON RBRACKET'''
-    if len(t) <=11:
+    if len(t) == 10:
         t[0] = ('function_value', t[2], t[4], "empty", t[8])
     else:
         t[0] = ('function_value', t[2], t[4], t[7], t[9])
 
 def p_statement_function_void_definition(t):
-    'inst : FONCTION_VOID NAME LPAREN params RPAREN LBRACKET linst RBRACKET'
-    t[0] = ('function_void', t[2], t[4], t[7])
+    '''inst : FONCTION_VOID NAME LPAREN params RPAREN LBRACKET linst RBRACKET
+        | FONCTION_VOID NAME LPAREN RPAREN LBRACKET linst RBRACKET'''
+    if len(t) == 9:
+        t[0] = ('function_void', t[2], t[4], t[7])
+    else:
+        t[0] = ('function_void', t[2], "empty", t[6])
 
 def p_statement_if(t):
     'inst : IF LPAREN expression RPAREN LBRACKET linst RBRACKET'
@@ -157,9 +161,12 @@ def p_statement_minus_equal(t):
     t[0] = ('minus_equals', t[1], t[4])
 
 def p_statement_function_void_call(t):
-    '''inst : NAME LPAREN call_params RPAREN COLON'''
-    t[0] = ('function_void_call', t[1], t[3])
-
+    '''inst : NAME LPAREN call_params RPAREN COLON
+        | NAME LPAREN RPAREN COLON '''
+    if len(t) == 6:
+        t[0] = ('function_void_call', t[1], t[3])
+    else:
+        t[0] = ('function_void_call', t[1], "empty")
 
 #def p_statement_expr(t):
 #    'inst : expression COLON'
@@ -294,13 +301,15 @@ def get_variable_reference(key):
 
 def load_function_params(tree, function):
     param_name = function[2]
-    param = tree[2]
-    while param and param_name:
-        functions_scope_stack[len(functions_scope_stack)-1][param_name[1]] = param[1]
-        if len(param) == 2 or len(param_name) == 2:
-            break
-        param_name = param_name[2]
-        param = param[2]
+    print(param_name)
+    if param_name != "empty":
+        param = tree[2]
+        while param and param_name:
+            functions_scope_stack[len(functions_scope_stack)-1][param_name[1]] = param[1]
+            if len(param) == 2 or len(param_name) == 2:
+                break
+            param_name = param_name[2]
+            param = param[2]
 
 import ply.yacc as yacc
 parser = yacc.yacc()
@@ -308,8 +317,9 @@ parser = yacc.yacc()
 #s='1+2;x=4 if ;x=x+1;'
 #s='for(i=0;i<4;i++;){print(i*i);}'# boucle for et incrementation
 #s='max=20;count=0;i=0;j=1;while(count<max)then;count++;print(i);tmp=j+i;i=j;j=tmp;end;' # fibonnacci boucle while
-#s='functionVoid voidFunction(a,b){print(a); print(a+b);}voidFunction(1,2);' # void function
-s='functionValue valueFunction(a,b){print(1);return a+b;}print(valueFunction(1,2));' # value function
+#s='functionVoid voidFunction(a,b){print(a); print(a+b);}voidFunction(1,2);' # void function with params
+#s='functionValue valueFunction(a,b){print(1);return a+b;}print(valueFunction(1,2));' # value function with params
+s='functionVoid noParam(){print(10);}noParam();' # void function without params
 #with open("1.in") as file: # Use file to refer to the file object
 
    #s = file.read()
