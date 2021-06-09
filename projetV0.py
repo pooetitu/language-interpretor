@@ -279,13 +279,6 @@ def eval_expr(tree):
             return_value = eval_expr(functions_value[tree[1]][4])
             functions_scope_stack.pop()
             return return_value
-        elif tree[0] == "function_value_bodyless":
-            functions_scope_stack.append({})
-            load_function_params(tree, functions_value[tree[1]])
-            eval_inst(functions_value[tree[1]][3])
-            return_value = eval_expr(functions_value[tree[1]][4])
-            functions_scope_stack.pop()
-            return return_value
     elif type(tree) == str:
         return get_variable_reference(tree)[tree]
     elif type(tree) == int:
