@@ -2,6 +2,7 @@ from genereTreeGraphviz2 import printTreeGraph
 
 reserved = {
    'if' : 'IF',
+   'else' : 'ELSE',
    'print' : 'PRINT',
    'printString' : 'PRINT_STRING',
    'while' : 'WHILE',
@@ -86,7 +87,7 @@ def p_start(t):
     ''' start : linst'''
     t[0] = ('start',t[1])
     print(t[0])
-    #printTreeGraph(t[0])
+    printTreeGraph(t[0])
     #eval(t[1])
     eval_inst(t[1])
     
@@ -140,10 +141,6 @@ def p_statement_return_void(t):
     '''inst : RETURN COLON'''
     t[0] = ('return', 'empty')
 
-def p_statement_if(t):
-    'inst : IF LPAREN expression RPAREN LBRACKET linst RBRACKET'
-    t[0] = ('if', t[3], t[6])
-
 def p_statement_while(t):
     'inst : WHILE LPAREN expression RPAREN LBRACKET linst RBRACKET'
     t[0] = ('while', t[3], t[6])
@@ -188,6 +185,21 @@ def p_statement_function_void_call(t):
     else:
         t[0] = ('function_void_call', t[1], "empty")
 
+def p_conditional(t):
+    'inst : conditional_if'
+    t[0] = t[1]
+
+def p_statement_if(t):
+    'conditional_if : IF LPAREN expression RPAREN LBRACKET linst RBRACKET conditional_else'
+    t[0] = ('if', t[3], t[6], t[8])
+
+def p_statement_else(t):
+    '''conditional_else : ELSE conditional_if 
+        | ELSE LBRACKET linst RBRACKET'''
+    if len(t) == 3:
+        t[0] = t[2]
+    else:
+        t[0] = (t[3])
 #def p_statement_expr(t):
 #    'inst : expression COLON'
 #
@@ -259,6 +271,8 @@ def eval_inst(tree):
     elif tree[0] == "if":
         if eval_expr(tree[1]):
             eval_inst(tree[2])
+        else:
+            eval_inst(tree[3])
     elif tree[0] == "while":
         while eval_expr(tree[1]):
             eval_inst(tree[2])
@@ -342,7 +356,6 @@ def load_function_params(tree, function):
 import ply.yacc as yacc
 parser = yacc.yacc()
 
-#s='1+2;x=4 if ;x=x+1;'
 #s='printString("Hello world");' # print string
 #s='for(i=0;i<4;i++;){print(i*i);}'# boucle for et incrementation
 #s='max=20;count=0;i=0;j=1;while(count<max){count++;print(i);tmp=j+i;i=j;j=tmp;}' # fibonnacci boucle while
@@ -354,9 +367,9 @@ parser = yacc.yacc()
 #s='functionVoid globalVariable(){print(a);}a=1;globalVariable();' # void function without params finish with error
 #s='functionVoid returnStop(){a=1; print(1); return; print(777);}returnStop();' # void function return stops function
 #s='functionValue returnStop(){a=1;print(1);return a+1;print(777);}print(returnStop());' # value function return stops function
-s='functionValue fibonacci(n){if(n>1){return fibonacci(n-1) + fibonacci(n - 2);} if((n == 0) | (n == 1)){return 1;}}print(fibonacci(10));'
-
-
+#s='functionValue fibonacci(n){if(n>1){return fibonacci(n-1) + fibonacci(n - 2);} if((n == 0) | (n == 1)){return 1;}}print(fibonacci(10));' # Recursive fibonacci function
+#s='x=0;if(x==1){printString("should not display");}else{printString("should be displayed");}' # Use of else block
+#s='x=0; if(x==1){printString("should not display");}else if(x==0){printString("should be displayed");}else{printString("should not display");}' # use of else if block
 #with open("1.in") as file: # Use file to refer to the file object
 
    #s = file.read()
