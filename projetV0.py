@@ -354,7 +354,7 @@ parser = yacc.yacc()
 #s='functionVoid globalVariable(){print(a);}a=1;globalVariable();' # void function without params finish with error
 #s='functionVoid returnStop(){a=1; print(1); return; print(777);}returnStop();' # void function return stops function
 #s='functionValue returnStop(){a=1;print(1);return a+1;print(777);}print(returnStop());' # value function return stops function
-s='functionValue fibonacci(n){if(n>1){return fibonacci(n-1);} if((n == 0) | (n == 1)){return 1;}}print(fibonacci(10));'
+s='functionValue fibonacci(n){if(n>1){return fibonacci(n-1) + fibonacci(n - 2);} if((n == 0) | (n == 1)){return 1;}}print(fibonacci(10));'
 
 
 #with open("1.in") as file: # Use file to refer to the file object
