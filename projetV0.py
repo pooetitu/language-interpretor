@@ -190,8 +190,12 @@ def p_conditional(t):
     t[0] = t[1]
 
 def p_statement_if(t):
-    'conditional_if : IF LPAREN expression RPAREN LBRACKET linst RBRACKET conditional_else'
-    t[0] = ('if', t[3], t[6], t[8])
+    '''conditional_if : IF LPAREN expression RPAREN LBRACKET linst RBRACKET 
+        | IF LPAREN expression RPAREN LBRACKET linst RBRACKET conditional_else'''
+    if len(t) == 8:
+        t[0] = ('if', t[3], t[6], 'empty')
+    else:
+        t[0] = ('if', t[3], t[6], t[8])
 
 def p_statement_else(t):
     '''conditional_else : ELSE conditional_if 
@@ -367,7 +371,7 @@ parser = yacc.yacc()
 #s='functionVoid globalVariable(){print(a);}a=1;globalVariable();' # void function without params finish with error
 #s='functionVoid returnStop(){a=1; print(1); return; print(777);}returnStop();' # void function return stops function
 #s='functionValue returnStop(){a=1;print(1);return a+1;print(777);}print(returnStop());' # value function return stops function
-#s='functionValue fibonacci(n){if(n>1){return fibonacci(n-1) + fibonacci(n - 2);} if((n == 0) | (n == 1)){return 1;}}print(fibonacci(10));' # Recursive fibonacci function
+s='functionValue fibonacci(n){if(n>1){return fibonacci(n-1) + fibonacci(n - 2);} if((n == 0) | (n == 1)){return 1;}}print(fibonacci(10));' # Recursive fibonacci function
 #s='x=0;if(x==1){printString("should not display");}else{printString("should be displayed");}' # Use of else block
 #s='x=0; if(x==1){printString("should not display");}else if(x==0){printString("should be displayed");}else{printString("should not display");}' # use of else if block
 #with open("1.in") as file: # Use file to refer to the file object
