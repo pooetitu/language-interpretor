@@ -97,24 +97,6 @@ def p_line(t):
         t[0] = ('bloc',t[1], t[2])
     else:
         t[0] = ('bloc',t[1], 'empty')
-    
-def p_function_void_linst(t):
-    '''linst_void : linst_void inst_void
-            | inst_void '''
-    if len(t) == 3 :
-        t[0] = ('bloc',t[1], t[2])
-    elif len:
-        t[0] = ('bloc', t[1], 'empty')
-
-def p_function_value_linst(t):
-    '''linst_value : linst_value inst_value
-        | linst_value return_value
-        | return_value
-        | inst_value'''
-    if len(t) == 3:
-        t[0] = ('bloc', t[1], t[2])
-    else:
-        t[0] = ('bloc', t[1], 'empty')
 
 def p_params(t):
     '''params : NAME COMMA params
@@ -134,8 +116,8 @@ def p_function_call_params(t):
         t[0] = ('param', t[1])
 
 def p_statement_function_value_definition(t):
-    '''inst : FONCTION_VALUE NAME LPAREN params RPAREN LBRACKET linst_value RBRACKET
-        | FONCTION_VALUE NAME LPAREN RPAREN LBRACKET linst_value RBRACKET'''
+    '''inst : FONCTION_VALUE NAME LPAREN params RPAREN LBRACKET linst RBRACKET
+        | FONCTION_VALUE NAME LPAREN RPAREN LBRACKET linst RBRACKET'''
     if len(t) == 9:
         t[0] = ('function_value', t[2], t[4], t[7])
     else:
@@ -143,29 +125,20 @@ def p_statement_function_value_definition(t):
 
 
 def p_statement_function_void_definition(t):
-    '''inst : FONCTION_VOID NAME LPAREN params RPAREN LBRACKET linst_void RBRACKET
-        | FONCTION_VOID NAME LPAREN RPAREN LBRACKET linst_void RBRACKET'''
+    '''inst : FONCTION_VOID NAME LPAREN params RPAREN LBRACKET linst RBRACKET
+        | FONCTION_VOID NAME LPAREN RPAREN LBRACKET linst RBRACKET'''
     if len(t) == 9:
         t[0] = ('function_void', t[2], t[4], t[7])
     else:
         t[0] = ('function_void', t[2], "empty", t[6])
 
 def p_statement_return_value(t):
-    '''return_value : RETURN expression COLON'''
+    '''inst : RETURN expression COLON'''
     t[0] = ('return', t[2])
 
-def p_statement_inst_value(t):
-    '''inst_value : inst
-    | return_value'''
-    t[0] = t[1]
-
 def p_statement_return_void(t):
-    '''inst_void : RETURN COLON'''
+    '''inst : RETURN COLON'''
     t[0] = ('return', 'empty')
-
-def p_statement_inst_void(t):
-    '''inst_void : inst'''
-    t[0] = t[1]
 
 def p_statement_if(t):
     'inst : IF LPAREN expression RPAREN LBRACKET linst RBRACKET'
@@ -284,22 +257,16 @@ def eval_inst(tree):
     elif tree[0] == "assign":
         get_variable_reference(tree[1])[tree[1]]=eval_expr(tree[2])
     elif tree[0] == "if":
-        functions_scope_stack.append({})
         if eval_expr(tree[1]):
             eval_inst(tree[2])
-        functions_scope_stack.pop()
     elif tree[0] == "while":
-        functions_scope_stack.append({})
         while eval_expr(tree[1]):
             eval_inst(tree[2])
-        functions_scope_stack.pop()
     elif tree[0] == "for":
-        functions_scope_stack.append({})
         eval_inst(tree[1])
         while eval_expr(tree[2]):
             eval_inst(tree[4])
             eval_inst(tree[3])
-        functions_scope_stack.pop()
     elif tree[0] == "incr":
         get_variable_reference(tree[1])[tree[1]]+=1
     elif tree[0] == "decr":
@@ -313,7 +280,6 @@ def eval_inst(tree):
     elif tree[0] == "function_value":
         functions_value[tree[1]] = tree
     elif tree[0] == "function_void_call":
-        functions_scope_stack.append({})
         load_function_params(tree, functions_void[tree[1]])
         eval_inst(functions_void[tree[1]][3])
         functions_scope_stack.pop()
@@ -342,7 +308,6 @@ def eval_expr(tree):
         elif tree[0] == '==':
             return eval_expr(tree[1]) == eval_expr(tree[2])
         elif tree[0] == "function_value_call":
-            functions_scope_stack.append({})
             load_function_params(tree, functions_value[tree[1]])
             eval_inst(functions_value[tree[1]][3])
             return_value = get_variable_reference("return")["return"]
@@ -362,16 +327,17 @@ def get_variable_reference(key):
 
 
 def load_function_params(tree, function):
+    params={}
     param_name = function[2]
-    print(param_name)
     if param_name != "empty":
         param = tree[2]
         while param and param_name:
-            functions_scope_stack[len(functions_scope_stack)-1][param_name[1]] = param[1]
+            params[param_name[1]] = eval_expr(param[1])
             if len(param) == 2 or len(param_name) == 2:
                 break
             param_name = param_name[2]
             param = param[2]
+    functions_scope_stack.append(params)
 
 import ply.yacc as yacc
 parser = yacc.yacc()
@@ -388,6 +354,8 @@ parser = yacc.yacc()
 #s='functionVoid globalVariable(){print(a);}a=1;globalVariable();' # void function without params finish with error
 #s='functionVoid returnStop(){a=1; print(1); return; print(777);}returnStop();' # void function return stops function
 #s='functionValue returnStop(){a=1;print(1);return a+1;print(777);}print(returnStop());' # value function return stops function
+s='functionValue fibonacci(n){if(n>1){return fibonacci(n-1);} if((n == 0) | (n == 1)){return 1;}}print(fibonacci(10));'
+
 
 #with open("1.in") as file: # Use file to refer to the file object
 
