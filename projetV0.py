@@ -89,7 +89,7 @@ def p_start(t):
     ''' start : linst'''
     t[0] = ('start',t[1])
     print(t[0])
-    printTreeGraph(t[0])
+    #printTreeGraph(t[0])
     #eval(t[1])
     eval_inst(t[1])
     
@@ -273,7 +273,7 @@ def eval_inst(tree):
     elif tree[0] == "print":
         print(eval_expr(tree[1]))
     elif tree[0] == "print_string":
-        print(tree[1])
+        print(tree[1][1:-1])
     elif tree[0] == "assign":
         get_variable_reference(tree[1])[tree[1]]=eval_expr(tree[2])
     elif tree[0] == "if":
@@ -368,11 +368,12 @@ def load_function_params(tree, function):
 import ply.yacc as yacc
 parser = yacc.yacc()
 
+#s='x=1;print(x);'
 #s='printString("Hello world");' # print string
 #s='for(i=0;i<4;i++;){print(i*i);}'# boucle for et incrementation
 #s='max=20;count=0;i=0;j=1;while(count<max){count++;print(i);tmp=j+i;i=j;j=tmp;}' # fibonnacci boucle while
 #s='functionVoid voidFunction(a,b){print(a); print(a+b);}voidFunction(1,2);' # void function with params
-#s='functionValue valueFunction(a,b){print(1);return a+b;}print(valueFunction(1,2));' # value function with params
+#s='functionValue valueFunction(a,b){return a+b;}print(valueFunction(1,2));' # value function with params
 #s='functionVoid noParamVoidFunction(){print(10);}noParamVoidFunction();' # void function without params
 #s='functionValue noParamValueFunction(){return 10;}print(noParamValueFunction());' # value function without params
 #s='functionVoid scoppedVariable(){a=1;}print(a);' # can't access to functions scope variable finish with error
@@ -381,7 +382,11 @@ parser = yacc.yacc()
 #s='functionValue returnStop(){a=1;print(1);return a+1;print(777);}print(returnStop());' # value function return stops function
 #s='functionValue fibonacci(n){if(n>=2){return fibonacci(n-1) + fibonacci(n - 2);} if((n == 0) | (n == 1)){return 1;}}print(fibonacci(10));' # Recursive fibonacci function
 #s='x=0;if(x==1){printString("should not display");}else{printString("should be displayed");}' # Use of else block
-#s='x=0; if(x==1){printString("should not display");}else if(x==0){printString("should be displayed");}else{printString("should not display");}' # use of else if block
+#s='x=0; if(x>=1){printString("should not display");}else if(x<=0){printString("should be displayed");}else{printString("should not display");}' # use of else if block
+#s='x=1;x+=5;print(x);'
+#s='x=1;x-=5;print(x);'
+
+
 #with open("1.in") as file: # Use file to refer to the file object
 
    #s = file.read()
