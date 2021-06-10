@@ -3,6 +3,7 @@ from genereTreeGraphviz2 import printTreeGraph
 reserved = {
    'if' : 'IF',
    'print' : 'PRINT',
+   'printString' : 'PRINT_STRING',
    'while' : 'WHILE',
    'for' : 'FOR',
    'functionValue' : "FONCTION_VALUE",
@@ -11,15 +12,22 @@ reserved = {
    }
 
 tokens = [
-    'NAME','NUMBER',
+    'STRING','NAME','NUMBER',
     'PLUS', 'MINUS', 'TIMES', 'DIVIDE', 'EQUALS', 
-    'LPAREN','RPAREN', 'LBRACKET','RBRACKET', 'COLON', 'COMMA', 'AND', 'OR', 'EQUAL', 'LOWER','HIGHER',
+    'AND', 'OR', 'EQUAL', 'LOWER','HIGHER',
+    'LPAREN','RPAREN', 'LBRACKET','RBRACKET', 
+    'COLON', 'COMMA',
     ]+list(reserved.values())
 
 # Tokens
 def t_NAME(t):
     r'[a-zA-Z_][a-zA-Z_0-9]*'
     t.type = reserved.get(t.value,'NAME')    # Check for reserved words
+    return t
+
+def t_STRING(t):
+    r'[\'"][^\'"\n]*[\'"]'
+    t.type = reserved.get(t.value,'STRING')    # Check for reserved words
     return t
 
 t_PLUS    = r'\+'
@@ -152,6 +160,10 @@ def p_statement_print(t):
     'inst : PRINT LPAREN expression RPAREN COLON'
     t[0] = ('print',t[3])
 
+def p_statement_print_string(t):
+    'inst : PRINT_STRING LPAREN STRING RPAREN COLON'
+    t[0] = ('print_string',t[3])
+
 def p_statement_incr(t):
     'inst : NAME PLUS PLUS COLON'
     t[0] = ('incr', t[1])
@@ -238,6 +250,8 @@ def eval_inst(tree):
         eval_inst(tree[2])
     elif tree[0] == "print":
         print(eval_expr(tree[1]))
+    elif tree[0] == "print_string":
+        print(tree[1])
     elif tree[0] == "assign":
         get_variable_reference(tree[1])[tree[1]]=eval_expr(tree[2])
     elif tree[0] == "if":
@@ -328,12 +342,16 @@ import ply.yacc as yacc
 parser = yacc.yacc()
 
 #s='1+2;x=4 if ;x=x+1;'
+s='printString("Hello world");' # print string
 #s='for(i=0;i<4;i++;){print(i*i);}'# boucle for et incrementation
 #s='max=20;count=0;i=0;j=1;while(count<max)then;count++;print(i);tmp=j+i;i=j;j=tmp;end;' # fibonnacci boucle while
 #s='functionVoid voidFunction(a,b){print(a); print(a+b);}voidFunction(1,2);' # void function with params
 #s='functionValue valueFunction(a,b){print(1);return a+b;}print(valueFunction(1,2));' # value function with params
 #s='functionVoid noParamVoidFunction(){print(10);}noParam();' # void function without params
-s='functionValue noParamValueFunction(){return 10;}print(noParamValueFunction());' # value function without params
+#s='functionValue noParamValueFunction(){return 10;}print(noParamValueFunction());' # value function without params
+#s='functionVoid scoppedVariable(){a=1;}print(a);' # can't access to functions scope variable finish with error
+#s='functionVoid globalVariable(){print(a);}a=1;globalVariable();' # void function without params finish with error
+
 
 #with open("1.in") as file: # Use file to refer to the file object
 
