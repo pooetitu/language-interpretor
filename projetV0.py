@@ -86,7 +86,7 @@ def p_start(t):
     ''' start : linst'''
     t[0] = ('start',t[1])
     print(t[0])
-    printTreeGraph(t[0])
+    #printTreeGraph(t[0])
     #eval(t[1])
     eval_inst(t[1])
     
@@ -136,7 +136,7 @@ def p_function_call_params(t):
 def p_statement_function_value_definition(t):
     '''inst : FONCTION_VALUE NAME LPAREN params RPAREN LBRACKET linst_value RBRACKET
         | FONCTION_VALUE NAME LPAREN RPAREN LBRACKET linst_value RBRACKET'''
-    if len(t) == 10:
+    if len(t) == 9:
         t[0] = ('function_value', t[2], t[4], t[7])
     else:
         t[0] = ('function_value', t[2], "empty", t[6])
@@ -379,14 +379,14 @@ parser = yacc.yacc()
 #s='1+2;x=4 if ;x=x+1;'
 #s='printString("Hello world");' # print string
 #s='for(i=0;i<4;i++;){print(i*i);}'# boucle for et incrementation
-#s='max=20;count=0;i=0;j=1;while(count<max)then;count++;print(i);tmp=j+i;i=j;j=tmp;end;' # fibonnacci boucle while
+#s='max=20;count=0;i=0;j=1;while(count<max){count++;print(i);tmp=j+i;i=j;j=tmp;}' # fibonnacci boucle while
 #s='functionVoid voidFunction(a,b){print(a); print(a+b);}voidFunction(1,2);' # void function with params
 #s='functionValue valueFunction(a,b){print(1);return a+b;}print(valueFunction(1,2));' # value function with params
-#s='functionVoid noParamVoidFunction(){print(10);}noParam();' # void function without params
+#s='functionVoid noParamVoidFunction(){print(10);}noParamVoidFunction();' # void function without params
 #s='functionValue noParamValueFunction(){return 10;}print(noParamValueFunction());' # value function without params
 #s='functionVoid scoppedVariable(){a=1;}print(a);' # can't access to functions scope variable finish with error
 #s='functionVoid globalVariable(){print(a);}a=1;globalVariable();' # void function without params finish with error
-s='functionVoid returnStop(){a=1; print(1); return; print(777);}returnStop();' # void function return stops function
+#s='functionVoid returnStop(){a=1; print(1); return; print(777);}returnStop();' # void function return stops function
 #s='functionValue returnStop(){a=1;print(1);return a+1;print(777);}print(returnStop());' # value function return stops function
 
 #with open("1.in") as file: # Use file to refer to the file object
