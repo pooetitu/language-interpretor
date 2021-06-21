@@ -255,9 +255,13 @@ def p_expression_function_value_call(t):
     else:
         t[0] = ('function_value_call', t[1], "empty")
 
-def p_expression_tab(t):
+def p_expression_tab_init(t):
     '''expression : LBRACKETS call_params RBRACKETS'''
     t[0] = ('table', t[2])
+
+def p_expression_tab_element_access(t):
+    'expression : NAME LBRACKETS expression RBRACKETS'
+    t[0] = ('table_access', t[1], t[3])
 
 def p_error(t):
     print("Syntax error at '%s'" % t.value)
@@ -349,6 +353,8 @@ def eval_expr(tree):
             return return_value
         elif tree[0] == 'table':
             return parse_table(tree[1])
+        elif tree[0] == 'table_access':
+            return get_variable_reference(tree[1])[tree[1]][tree[2]]
     elif type(tree) == str:
         return get_variable_reference(tree)[tree]
     elif type(tree) == int:
@@ -375,7 +381,7 @@ def load_function_params(tree, function):
             param = param[2]
     functions_scope_stack.append(params)
 
-def parse_table(tree,tab=[]):
+def parse_table(tree, tab=[]):
     tab.append(tree[1])
     if len(tree) == 3:
         parse_table(tree[2], tab)
@@ -403,7 +409,8 @@ parser = yacc.yacc()
 #s='x=1;x-=5;print(x);'
 
 # Newly added code
-s='x=[5,6,7,8,9];print(x);'# Init array and print content
+#s='x=[5,6,7,8,9];print(x);'# Init array and print content
+s='x=[5,6,7,8,9];print(x[0]);'# Init array and print element accessed by index
 
 #with open("1.in") as file: # Use file to refer to the file object
 
