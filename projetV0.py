@@ -16,7 +16,7 @@ tokens = [
     'STRING','NAME','NUMBER',
     'PLUS', 'MINUS', 'TIMES', 'DIVIDE', 'EQUALS', 
     'AND', 'OR', 'EQUAL', 'LOWER','HIGHER', 'LOWER_OR_EQUAL', 'HIGHER_OR_EQUAL',
-    'LPAREN','RPAREN', 'LBRACKET','RBRACKET', 
+    'LPAREN','RPAREN', 'LBRACKET','RBRACKET','LBRACKETS','RBRACKETS',
     'COLON', 'COMMA',
     ]+list(reserved.values())
 
@@ -40,6 +40,8 @@ t_LPAREN  = r'\('
 t_RPAREN  = r'\)'
 t_LBRACKET  = r'\{'
 t_RBRACKET  = r'\}'
+t_RBRACKETS  = r'\]'
+t_LBRACKETS  = r'\['
 t_COLON = r';'
 t_COMMA = r','
 t_AND  = r'\&'
@@ -89,8 +91,7 @@ def p_start(t):
     ''' start : linst'''
     t[0] = ('start',t[1])
     print(t[0])
-    #printTreeGraph(t[0])
-    #eval(t[1])
+    printTreeGraph(t[0])
     eval_inst(t[1])
     
 def p_line(t):
@@ -254,6 +255,10 @@ def p_expression_function_value_call(t):
     else:
         t[0] = ('function_value_call', t[1], "empty")
 
+def p_expression_tab(t):
+    '''expression : LBRACKETS call_params RBRACKETS'''
+    t[0] = ('table', t[2])
+
 def p_error(t):
     print("Syntax error at '%s'" % t.value)
 
@@ -294,9 +299,9 @@ def eval_inst(tree):
     elif tree[0] == "decr":
         get_variable_reference(tree[1])[tree[1]]-=1
     elif tree[0] == "plus_equals":
-        get_variable_reference(tree[1])[tree[1]]+=tree[2]
+        get_variable_reference(tree[1])[tree[1]]+=eval_expr(tree[2])
     elif tree[0] == "minus_equals":
-        get_variable_reference(tree[1])[tree[1]]-=tree[2]
+        get_variable_reference(tree[1])[tree[1]]-=eval_expr(tree[2])
     elif tree[0] == "function_void":
         functions_void[tree[1]] = tree
     elif tree[0] == "function_value":
@@ -305,6 +310,9 @@ def eval_inst(tree):
         load_function_params(tree, functions_void[tree[1]])
         eval_inst(functions_void[tree[1]][3])
         functions_scope_stack.pop()
+    elif tree[0] == "table":
+        get_variable_reference(tree[1])[tree[1]]=eval_expr(tree[2])
+        print(parse_table(tree[2]))
     elif tree != "empty":
         eval_expr(tree)
 
@@ -339,6 +347,8 @@ def eval_expr(tree):
             return_value = get_variable_reference("return")["return"]
             functions_scope_stack.pop()
             return return_value
+        elif tree[0] == 'table':
+            return parse_table(tree[1])
     elif type(tree) == str:
         return get_variable_reference(tree)[tree]
     elif type(tree) == int:
@@ -365,6 +375,12 @@ def load_function_params(tree, function):
             param = param[2]
     functions_scope_stack.append(params)
 
+def parse_table(tree,tab=[]):
+    tab.append(tree[1])
+    if len(tree) == 3:
+        parse_table(tree[2], tab)
+    return tab
+
 import ply.yacc as yacc
 parser = yacc.yacc()
 
@@ -376,7 +392,7 @@ parser = yacc.yacc()
 #s='functionValue valueFunction(a,b){return a+b;}print(valueFunction(1,2));' # value function with params
 #s='functionVoid noParamVoidFunction(){print(10);}noParamVoidFunction();' # void function without params
 #s='functionValue noParamValueFunction(){return 10;}print(noParamValueFunction());' # value function without params
-#s='functionVoid scoppedVariable(){a=1;}print(a);' # can't access to functions scope variable finish with error
+#s='functionVoid scoppedVariable(){a=1;}scoppedVariable();print(a);' # can't access to functions scope variable finish with error
 #s='functionVoid globalVariable(){print(a);}a=1;globalVariable();' # void function without params finish with error
 #s='functionVoid returnStop(){a=1; print(1); return; print(777);}returnStop();' # void function return stops function
 #s='functionValue returnStop(){a=1;print(1);return a+1;print(777);}print(returnStop());' # value function return stops function
@@ -386,6 +402,8 @@ parser = yacc.yacc()
 #s='x=1;x+=5;print(x);'
 #s='x=1;x-=5;print(x);'
 
+# Newly added code
+s='x=[5,6,7,8,9];print(x);'# Init array and print content
 
 #with open("1.in") as file: # Use file to refer to the file object
 
