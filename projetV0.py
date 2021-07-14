@@ -258,15 +258,15 @@ def p_expression_function_value_call(t):
 
 def p_expression_tab_init(t):
     '''expression : LBRACKETS call_params RBRACKETS'''
-    t[0] = ('table', t[2])
+    t[0] = ('array', t[2])
 
 def p_expression_tab_element_access(t):
     'expression : NAME LBRACKETS expression RBRACKETS'
-    t[0] = ('table_access', t[1], t[3])
+    t[0] = ('array_access', t[1], t[3])
 
 def p_expression_tab_length(t):
     'expression : LENGTH LPAREN NAME RPAREN'
-    t[0] = ('table_length', t[3])
+    t[0] = ('array_length', t[3])
 
 def p_error(t):
     print("Syntax error at '%s'" % t.value)
@@ -319,9 +319,9 @@ def eval_inst(tree):
         load_function_params(tree, functions_void[tree[1]])
         eval_inst(functions_void[tree[1]][3])
         functions_scope_stack.pop()
-    elif tree[0] == "table":
+    elif tree[0] == "array":
         get_variable_reference(tree[1])[tree[1]]=eval_expr(tree[2])
-        print(parse_table(tree[2]))
+        print(parse_array(tree[2]))
     elif tree != "empty":
         eval_expr(tree)
 
@@ -356,11 +356,11 @@ def eval_expr(tree):
             return_value = get_variable_reference("return")["return"]
             functions_scope_stack.pop()
             return return_value
-        elif tree[0] == 'table':
-            return parse_table(tree[1])
-        elif tree[0] == 'table_access':
+        elif tree[0] == 'array':
+            return parse_array(tree[1])
+        elif tree[0] == 'array_access':
             return get_variable_reference(tree[1])[tree[1]][tree[2]]
-        elif tree[0] == 'table_length':
+        elif tree[0] == 'array_length':
             return len(get_variable_reference(tree[1])[tree[1]])
     elif type(tree) == str:
         return get_variable_reference(tree)[tree]
@@ -388,10 +388,10 @@ def load_function_params(tree, function):
             param = param[2]
     functions_scope_stack.append(params)
 
-def parse_table(tree, tab=[]):
+def parse_array(tree, tab=[]):
     tab.append(tree[1])
     if len(tree) == 3:
-        parse_table(tree[2], tab)
+        parse_array(tree[2], tab)
     return tab
 
 import ply.yacc as yacc
