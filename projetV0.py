@@ -9,7 +9,8 @@ reserved = {
    'for' : 'FOR',
    'functionValue' : "FONCTION_VALUE",
    'functionVoid' : "FONCTION_VOID",
-   'return' : 'RETURN'
+   'return' : 'RETURN',
+   'length' : 'LENGTH'
    }
 
 tokens = [
@@ -263,6 +264,10 @@ def p_expression_tab_element_access(t):
     'expression : NAME LBRACKETS expression RBRACKETS'
     t[0] = ('table_access', t[1], t[3])
 
+def p_expression_tab_length(t):
+    'expression : LENGTH LPAREN NAME RPAREN'
+    t[0] = ('table_length', t[3])
+
 def p_error(t):
     print("Syntax error at '%s'" % t.value)
 
@@ -355,6 +360,8 @@ def eval_expr(tree):
             return parse_table(tree[1])
         elif tree[0] == 'table_access':
             return get_variable_reference(tree[1])[tree[1]][tree[2]]
+        elif tree[0] == 'table_length':
+            return len(get_variable_reference(tree[1])[tree[1]])
     elif type(tree) == str:
         return get_variable_reference(tree)[tree]
     elif type(tree) == int:
@@ -410,7 +417,9 @@ parser = yacc.yacc()
 
 # Newly added code
 #s='x=[5,6,7,8,9];print(x);'# Init array and print content
-s='x=[5,6,7,8,9];print(x[0]);'# Init array and print element accessed by index
+#s='x=[5,6,7,8,9];print(x[1]);'# Init array and print element accessed by index
+#s='x=[5,6,7,8,9];print(length(x));'#Get size of an array
+
 
 #with open("1.in") as file: # Use file to refer to the file object
 
