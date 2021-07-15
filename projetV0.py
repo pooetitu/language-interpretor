@@ -10,7 +10,9 @@ reserved = {
    'functionValue' : "FONCTION_VALUE",
    'functionVoid' : "FONCTION_VOID",
    'return' : 'RETURN',
-   'length' : 'LENGTH'
+   'length' : 'LENGTH',
+   'class' : 'CLASS',
+   'new' : 'NEW'
    }
 
 tokens = [
@@ -18,7 +20,7 @@ tokens = [
     'PLUS', 'MINUS', 'TIMES', 'DIVIDE', 'EQUALS', 
     'AND', 'OR', 'EQUAL', 'LOWER','HIGHER', 'LOWER_OR_EQUAL', 'HIGHER_OR_EQUAL',
     'LPAREN','RPAREN', 'LBRACKET','RBRACKET','LBRACKETS','RBRACKETS',
-    'COLON', 'COMMA',
+    'COLON', 'COMMA','DOT'
     ]+list(reserved.values())
 
 # Tokens
@@ -52,6 +54,7 @@ t_LOWER  = r'\<'
 t_LOWER_OR_EQUAL  = r'\<='
 t_HIGHER  = r'\>'
 t_HIGHER_OR_EQUAL  = r'\>='
+t_DOT    = r'.'
 
 def t_NUMBER(t):
     r'\d+'
@@ -92,7 +95,7 @@ def p_start(t):
     ''' start : linst'''
     t[0] = ('start',t[1])
     print(t[0])
-    printTreeGraph(t[0])
+    #printTreeGraph(t[0])
     eval_inst(t[1])
     
 def p_line(t):
@@ -208,14 +211,23 @@ def p_statement_else(t):
         t[0] = t[2]
     else:
         t[0] = (t[3])
-#def p_statement_expr(t):
-#    'inst : expression COLON'
-#
-#    t[0] = t[1]
 
+def p_statement_class(t):
+    'inst : CLASS NAME LBRACKET linst RBRACKET'
+    t[0] = ('class', t[2], t[4])
 
+def p_statement_object_instantiation(t):
+    '''inst : NAME EQUALS NEW NAME LPAREN RPAREN COLON
+            | NAME EQUALS NEW NAME LPAREN params RPAREN COLON'''
+    if len(t) == 8:
+        t[0] = ('object_instantiate', t[1], t[4], 'empty')
+    else:
+        t[0] = ('object_instantiate', t[1], t[4], t[6])
 
-    
+def p_statement_object_call(t):
+    'inst : NAME DOT inst'
+    t[0] = ('class_inst_call',t[1], t[3])
+
 def p_expression_binop(t):
     '''expression : expression PLUS expression
                   | expression MINUS expression
@@ -268,120 +280,160 @@ def p_expression_tab_length(t):
     'expression : LENGTH LPAREN NAME RPAREN'
     t[0] = ('array_length', t[3])
 
+def p_expression_object_call(t):
+    'expression : NAME DOT expression'
+    t[0] = ('class_expr_call',t[1], t[3])
+
 def p_error(t):
     print("Syntax error at '%s'" % t.value)
 
+
+classes={}
 functions_value={}
 functions_void={}
 functions_scope_stack=[]
 names={}
 
-def eval_inst(tree):
+def eval_inst(tree, instance=None):
     print("evalInst de " + str(tree)) 
     if tree[0] == "bloc":
-        eval_inst(tree[1])
+        eval_inst(tree[1], instance)
         if not (len(functions_scope_stack) > 0 and 'return' in functions_scope_stack[len(functions_scope_stack)-1]):
-            eval_inst(tree[2])
+            eval_inst(tree[2], instance)
     elif tree[0] == "return":
-        get_variable_reference("return")["return"] = None if tree[1] == "empty" else eval_expr(tree[1])
+        get_variable_reference("return")["return"] = None if tree[1] == "empty" else eval_expr(tree[1], instance)
     elif tree[0] == "print":
-        print(eval_expr(tree[1]))
+        print(eval_expr(tree[1],instance))
     elif tree[0] == "print_string":
         print(tree[1][1:-1])
     elif tree[0] == "assign":
-        get_variable_reference(tree[1])[tree[1]]=eval_expr(tree[2])
+        get_variable_reference(tree[1], instance)[tree[1]]=eval_expr(tree[2], instance)
     elif tree[0] == "if":
-        if eval_expr(tree[1]):
-            eval_inst(tree[2])
+        if eval_expr(tree[1], instance):
+            eval_inst(tree[2], instance)
         else:
-            eval_inst(tree[3])
+            eval_inst(tree[3], instance)
     elif tree[0] == "while":
-        while eval_expr(tree[1]):
-            eval_inst(tree[2])
+        while eval_expr(tree[1], instance):
+            eval_inst(tree[2], instance)
     elif tree[0] == "for":
         eval_inst(tree[1])
-        while eval_expr(tree[2]):
-            eval_inst(tree[4])
-            eval_inst(tree[3])
+        while eval_expr(tree[2], instance):
+            eval_inst(tree[4], instance)
+            eval_inst(tree[3], instance)
     elif tree[0] == "incr":
-        get_variable_reference(tree[1])[tree[1]]+=1
+        get_variable_reference(tree[1], instance)[tree[1]]+=1
     elif tree[0] == "decr":
-        get_variable_reference(tree[1])[tree[1]]-=1
+        get_variable_reference(tree[1], instance)[tree[1]]-=1
     elif tree[0] == "plus_equals":
-        get_variable_reference(tree[1])[tree[1]]+=eval_expr(tree[2])
+        get_variable_reference(tree[1], instance)[tree[1]]+=eval_expr(tree[2], instance)
     elif tree[0] == "minus_equals":
-        get_variable_reference(tree[1])[tree[1]]-=eval_expr(tree[2])
+        get_variable_reference(tree[1], instance)[tree[1]]-=eval_expr(tree[2], instance)
     elif tree[0] == "function_void":
-        functions_void[tree[1]] = tree
+        if instance == None:
+            functions_void[tree[1]] = tree
+        else:
+            instance["functions_void"][tree[1]] = tree
     elif tree[0] == "function_value":
-        functions_value[tree[1]] = tree
+        if instance == None:
+            functions_value[tree[1]] = tree
+        else:
+            instance["functions_value"][tree[1]] = tree
     elif tree[0] == "function_void_call":
-        load_function_params(tree, functions_void[tree[1]])
-        eval_inst(functions_void[tree[1]][3])
+        load_function_params(tree, get_void_function_reference(tree[1], instance), instance)
+        eval_inst(get_void_function_reference(tree[1], instance)[3], instance)
         functions_scope_stack.pop()
     elif tree[0] == "array":
-        get_variable_reference(tree[1])[tree[1]]=eval_expr(tree[2])
-        print(parse_array(tree[2]))
+        get_variable_reference(tree[1], instance)[tree[1]]=eval_expr(tree[2])
+    elif tree[0] == "class":
+        classes[tree[1]] = tree
+    elif tree[0] == "object_instantiate":
+        instantiate_object(tree, instance)
+    elif tree[0] == "class_inst_call":
+        eval_inst(tree[2], get_variable_reference(tree[1], instance)[tree[1]])
     elif tree != "empty":
-        eval_expr(tree)
+        eval_expr(tree, instance)
 
-def eval_expr(tree):
+
+def instantiate_object(tree, instance):
+    get_variable_reference(tree[1], instance)[tree[1]]={}
+    instance = get_variable_reference(tree[1], instance)[tree[1]]
+    instance["functions_value"]={}
+    instance["functions_void"]={}
+    eval_inst(classes[tree[2]][2], instance)
+
+def eval_expr(tree, instance = None):
     print("evalExpr de " + str(tree))
     if type(tree) == tuple:
         if tree[0] == '+':
-            return eval_expr(tree[1]) + eval_expr(tree[2])
+            return eval_expr(tree[1], instance) + eval_expr(tree[2], instance)
         elif tree[0] == '-':
-            return eval_expr(tree[1]) - eval_expr(tree[2])
+            return eval_expr(tree[1], instance) - eval_expr(tree[2], instance)
         elif tree[0] == '*':
-            return eval_expr(tree[1]) * eval_expr(tree[2])
+            return eval_expr(tree[1], instance) * eval_expr(tree[2], instance)
         elif tree[0] == '/':
-            return eval_expr(tree[1]) / eval_expr(tree[2])
+            return eval_expr(tree[1]) / eval_expr(tree[2], instance)
         elif tree[0] == '&':
-            return eval_expr(tree[1]) and eval_expr(tree[2])
+            return eval_expr(tree[1], instance) and eval_expr(tree[2], instance)
         elif tree[0] == '|':
-            return eval_expr(tree[1]) or eval_expr(tree[2])
+            return eval_expr(tree[1], instance) or eval_expr(tree[2], instance)
         elif tree[0] == '>':
-            return eval_expr(tree[1]) > eval_expr(tree[2])
+            return eval_expr(tree[1], instance) > eval_expr(tree[2], instance)
         elif tree[0] == '<':
-            return eval_expr(tree[1]) < eval_expr(tree[2])
+            return eval_expr(tree[1], instance) < eval_expr(tree[2], instance)
         elif tree[0] == '>=':
-            return eval_expr(tree[1]) >= eval_expr(tree[2])
+            return eval_expr(tree[1], instance) >= eval_expr(tree[2], instance)
         elif tree[0] == '<=':
-            return eval_expr(tree[1]) <= eval_expr(tree[2])
+            return eval_expr(tree[1], instance) <= eval_expr(tree[2], instance)
         elif tree[0] == '==':
-            return eval_expr(tree[1]) == eval_expr(tree[2])
+            return eval_expr(tree[1], instance) == eval_expr(tree[2], instance)
         elif tree[0] == "function_value_call":
-            load_function_params(tree, functions_value[tree[1]])
-            eval_inst(functions_value[tree[1]][3])
+            load_function_params(tree, get_value_function_reference(tree[1], instance), instance)
+            eval_inst(get_value_function_reference(tree[1], instance)[3], instance)
             return_value = get_variable_reference("return")["return"]
             functions_scope_stack.pop()
             return return_value
         elif tree[0] == 'array':
             return parse_array(tree[1])
         elif tree[0] == 'array_access':
-            return get_variable_reference(tree[1])[tree[1]][tree[2]]
+            return get_variable_reference(tree[1], instance)[tree[1]][tree[2]]
         elif tree[0] == 'array_length':
-            return len(get_variable_reference(tree[1])[tree[1]])
+            return len(get_variable_reference(tree[1], instance)[tree[1]])
+        elif tree[0] == 'class_expr_call':
+            return eval_expr(tree[2], get_variable_reference(tree[1])[tree[1]])
     elif type(tree) == str:
-        return get_variable_reference(tree)[tree]
+        return get_variable_reference(tree, instance)[tree]
     elif type(tree) == int:
         return tree
 
-
-def get_variable_reference(key):
-    if key in names or len(functions_scope_stack) == 0:
-        return names
+def get_void_function_reference(key, instance=None):
+    if instance != None and key in instance["functions_void"]:
+        return instance["functions_void"][key]
     else:
+        return functions_void[key]
+
+def get_value_function_reference(key, instance=None):
+    if instance != None and key in instance["functions_value"]:
+        return instance["functions_value"][key]
+    else:
+        return functions_value[key]
+
+def get_variable_reference(key, instance=None):
+    if key in names or len(functions_scope_stack) == 0 and instance == None:
+        return names
+    elif len(functions_scope_stack) != 0 and key in functions_scope_stack[len(functions_scope_stack)-1] or instance == None:
         return functions_scope_stack[len(functions_scope_stack)-1]
+    else:
+        return instance
 
 
-def load_function_params(tree, function):
+def load_function_params(tree, function, instance=None):
     params={}
     param_name = function[2]
     if param_name != "empty":
         param = tree[2]
         while param and param_name:
-            params[param_name[1]] = eval_expr(param[1])
+            params[param_name[1]] = eval_expr(param[1], instance)
             if len(param) == 2 or len(param_name) == 2:
                 break
             param_name = param_name[2]
@@ -420,10 +472,10 @@ parser = yacc.yacc()
 #s='x=[5,6,7,8,9];print(x[1]);'# Init array and print element accessed by index
 #s='x=[5,6,7,8,9];print(length(x));'#Get size of an array
 
+s='class Car { kilometer=0; functionValue getKilometer(){ return kilometer; } functionVoid setKilometer(value){ kilometer = value; } functionVoid move(){ setKilometer(kilometer+1); } } car= new Car(); car.move(); print(car.kilometer); car.setKilometer(5);print(car.getKilometer()); print(car);' # Define class instantiate it and call inner functions and properties
 
 #with open("1.in") as file: # Use file to refer to the file object
 
    #s = file.read()
 
-print(parser.parse(s))
-
+parser.parse(s)
