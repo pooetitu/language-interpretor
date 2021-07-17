@@ -12,7 +12,8 @@ reserved = {
    'return' : 'RETURN',
    'length' : 'LENGTH',
    'class' : 'CLASS',
-   'new' : 'NEW'
+   'new' : 'NEW',
+   'extends' : 'EXTENDS'
    }
 
 tokens = [
@@ -213,8 +214,12 @@ def p_statement_else(t):
         t[0] = (t[3])
 
 def p_statement_class(t):
-    'inst : CLASS NAME LBRACKET linst RBRACKET'
-    t[0] = ('class', t[2], t[4])
+    '''inst : CLASS NAME LBRACKET linst RBRACKET
+        | CLASS NAME EXTENDS NAME LBRACKET linst RBRACKET'''
+    if len(t) == 6:
+        t[0] = ('class', t[2], 'empty', t[4])
+    else:
+        t[0] = ('class',t[2],t[4], t[6])
 
 def p_statement_object_instantiation(t):
     '''inst : NAME EQUALS NEW NAME LPAREN RPAREN COLON
@@ -348,19 +353,22 @@ def eval_inst(tree, instance=None):
     elif tree[0] == "class":
         classes[tree[1]] = tree
     elif tree[0] == "object_instantiate":
-        instantiate_object(tree, instance)
+        get_variable_reference(tree[1], instance)[tree[1]]=instantiate_object(tree[2])
     elif tree[0] == "class_inst_call":
         eval_inst(tree[2], get_variable_reference(tree[1], instance)[tree[1]])
     elif tree != "empty":
         eval_expr(tree, instance)
 
 
-def instantiate_object(tree, instance):
-    get_variable_reference(tree[1], instance)[tree[1]]={}
-    instance = get_variable_reference(tree[1], instance)[tree[1]]
-    instance["functions_value"]={}
-    instance["functions_void"]={}
-    eval_inst(classes[tree[2]][2], instance)
+def instantiate_object(class_name):
+    clas=classes[class_name]
+    obj={}
+    obj["functions_value"]={}
+    obj["functions_void"]={}
+    if clas[2] != "empty":
+        obj["super"]=instantiate_object(clas[2])
+    eval_inst(clas[3], obj)
+    return obj
 
 def eval_expr(tree, instance = None):
     print("evalExpr de " + str(tree))
@@ -407,24 +415,46 @@ def eval_expr(tree, instance = None):
         return tree
 
 def get_void_function_reference(key, instance=None):
-    if instance != None and key in instance["functions_void"]:
-        return instance["functions_void"][key]
+    instance_fn=get_void_function_from_instance(key, instance)
+    if instance_fn != None:
+        return instance_fn
     else:
         return functions_void[key]
 
 def get_value_function_reference(key, instance=None):
-    if instance != None and key in instance["functions_value"]:
-        return instance["functions_value"][key]
+    instance_fn=get_value_function_from_instance(key, instance)
+    if instance_fn != None:
+        return instance_fn
     else:
         return functions_value[key]
+
+def get_void_function_from_instance(key, instance):
+    while instance != None:
+        if key in instance["functions_void"]:
+            return instance["functions_void"][key]
+        instance = instance["super"] if super in instance else None
+
+def get_value_function_from_instance(key, instance):
+    while instance != None:
+        if key in instance["functions_value"]:
+            return instance["functions_value"][key]
+        instance = instance["super"] if "super" in instance else None
 
 def get_variable_reference(key, instance=None):
     if key in names or len(functions_scope_stack) == 0 and instance == None:
         return names
     elif len(functions_scope_stack) != 0 and key in functions_scope_stack[len(functions_scope_stack)-1] or instance == None:
         return functions_scope_stack[len(functions_scope_stack)-1]
+    elif get_super_variable_reference(key,instance) != None:
+        return get_super_variable_reference(key, instance)
     else:
         return instance
+
+def get_super_variable_reference(key,instance):
+    while instance != None:
+        if key in instance:
+            return instance
+        instance = instance["super"] if "super" in instance else None
 
 
 def load_function_params(tree, function, instance=None):
@@ -472,7 +502,12 @@ parser = yacc.yacc()
 #s='x=[5,6,7,8,9];print(x[1]);'# Init array and print element accessed by index
 #s='x=[5,6,7,8,9];print(length(x));'#Get size of an array
 
-s='class Car { kilometer=0; functionValue getKilometer(){ return kilometer; } functionVoid setKilometer(value){ kilometer = value; } functionVoid move(){ setKilometer(kilometer+1); } } car= new Car(); car.move(); print(car.kilometer); car.setKilometer(5);print(car.getKilometer()); print(car);' # Define class instantiate it and call inner functions and properties
+#s='class Car { kilometer=0; functionValue getKilometer(){ return kilometer; } functionVoid setKilometer(value){ kilometer = value; } functionVoid move(){ setKilometer(kilometer+1); } } car= new Car(); car.move(); print(car.kilometer); car.setKilometer(5);print(car.getKilometer()); print(car);' # Define class instantiate it and call inner functions and properties
+s='''class Animal { x=1; functionValue getX(){ return x; } }
+ class Dog extends Animal { functionVoid setX(value){super.x=value;} functionVoid makeNoise() { printString("Waf"); } }
+ class Cat extends Animal { functionVoid makeNoise() { printString("Miaou"); } }
+ cat= new Cat(); dog = new Dog(); dog.makeNoise(); cat.makeNoise(); print(dog.getX()); dog.setX(10); print(dog.getX()); print(cat.getX());''' 
+# Create mother class animal which is implemented by two subclasses dog and cat both make prints different string they doesn't share the same mother instance and dog can edit super's property
 
 #with open("1.in") as file: # Use file to refer to the file object
 
