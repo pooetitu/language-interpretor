@@ -390,6 +390,8 @@ def eval_inst(tree, instance=None):
         get_variable_reference(tree[1], instance)[tree[1]]=instantiate_object(tree[2])
     elif tree[0] == "class_inst_call":
         eval_inst(tree[2], get_variable_reference(tree[1], instance)[tree[1]])
+    elif tree[0] == 'comment':
+        doc_string.write(tree[1]+'\n\n')
     elif tree != "empty":
         eval_expr(tree, instance)
 
@@ -447,8 +449,6 @@ def eval_expr(tree, instance = None):
             return id(get_variable_reference(tree[1])[tree[1]])
         elif tree[0] == 'var_ptr':
             return ctypes.cast(get_variable_reference(tree[1])[tree[1]], ctypes.py_object).value
-        elif tree[0] == 'comment':
-            doc_string.write(tree[1]+'\n\n')
     elif type(tree) == str:
         return get_variable_reference(tree, instance)[tree]
     elif type(tree) == int:
