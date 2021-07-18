@@ -96,7 +96,7 @@ def p_start(t):
     ''' start : linst'''
     t[0] = ('start',t[1])
     print(t[0])
-    #printTreeGraph(t[0])
+    printTreeGraph(t[0])
     eval_inst(t[1])
     
 def p_line(t):
@@ -162,7 +162,7 @@ def p_statement_assign(t):
     t[0] = ('assign', t[1], t[3])
 
 def p_statement_print(t):
-    'inst : PRINT LPAREN expression RPAREN COLON'
+    'inst : PRINT LPAREN call_params RPAREN COLON'
     t[0] = ('print',t[3])
 
 def p_statement_print_string(t):
@@ -308,7 +308,7 @@ def eval_inst(tree, instance=None):
     elif tree[0] == "return":
         get_variable_reference("return")["return"] = None if tree[1] == "empty" else eval_expr(tree[1], instance)
     elif tree[0] == "print":
-        print(eval_expr(tree[1],instance))
+        print(' '.join(str(x) for x in get_params_to_array(tree[1],instance)))
     elif tree[0] == "print_string":
         print(tree[1][1:-1])
     elif tree[0] == "assign":
@@ -456,6 +456,12 @@ def get_super_variable_reference(key,instance):
             return instance
         instance = instance["super"] if "super" in instance else None
 
+def get_params_to_array(params, instance):
+    tab=[]
+    while params != None:
+        tab.append(eval_expr(params[1],instance))
+        params = params[2] if len(params) == 3 else None
+    return tab
 
 def load_function_params(tree, function, instance=None):
     params={}
@@ -503,11 +509,13 @@ parser = yacc.yacc()
 #s='x=[5,6,7,8,9];print(length(x));'#Get size of an array
 
 #s='class Car { kilometer=0; functionValue getKilometer(){ return kilometer; } functionVoid setKilometer(value){ kilometer = value; } functionVoid move(){ setKilometer(kilometer+1); } } car= new Car(); car.move(); print(car.kilometer); car.setKilometer(5);print(car.getKilometer()); print(car);' # Define class instantiate it and call inner functions and properties
-s='''class Animal { x=1; functionValue getX(){ return x; } }
- class Dog extends Animal { functionVoid setX(value){super.x=value;} functionVoid makeNoise() { printString("Waf"); } }
- class Cat extends Animal { functionVoid makeNoise() { printString("Miaou"); } }
- cat= new Cat(); dog = new Dog(); dog.makeNoise(); cat.makeNoise(); print(dog.getX()); dog.setX(10); print(dog.getX()); print(cat.getX());''' 
+#s='''class Animal { x=1; functionValue getX(){ return x; } }
+# class Dog extends Animal { functionVoid setX(value){super.x=value;} functionVoid makeNoise() { printString("Waf"); } }
+# class Cat extends Animal { functionVoid makeNoise() { printString("Miaou"); } }
+# cat= new Cat(); dog = new Dog(); dog.makeNoise(); cat.makeNoise(); print(dog.getX()); dog.setX(10); print(dog.getX()); print(cat.getX());''' 
 # Create mother class animal which is implemented by two subclasses dog and cat both make prints different string they doesn't share the same mother instance and dog can edit super's property
+
+s="x=1;print(x,2,x+2);"# Print with multiple parameters
 
 #with open("1.in") as file: # Use file to refer to the file object
 
