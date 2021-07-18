@@ -18,7 +18,7 @@ reserved = {
    }
 
 tokens = [
-    'STRING','NAME','NUMBER',
+    'STRING','NAME','NUMBER', 'COMMENT','MULTILINE_COMMENT',
     'PLUS', 'MINUS', 'TIMES', 'DIVIDE', 'EQUALS', 
     'AND', 'OR', 'EQUAL', 'LOWER','HIGHER', 'LOWER_OR_EQUAL', 'HIGHER_OR_EQUAL',
     'LPAREN','RPAREN', 'LBRACKET','RBRACKET','LBRACKETS','RBRACKETS',
@@ -34,6 +34,19 @@ def t_NAME(t):
 def t_STRING(t):
     r'[\'"][^\'"\n]*[\'"]'
     t.type = reserved.get(t.value,'STRING')    # Check for reserved words
+    t.value = t.value[1:-1]
+    return t
+
+def t_COMMENT(t):
+    r'(//.*)'
+    t.type = reserved.get(t.value,'COMMENT')    # Check for reserved words
+    t.value = t.value[2:]
+    return t
+
+def t_MULTILINE_COMMENT(t):
+    r'(/\*(.|\n)*?\*/)'
+    t.type = reserved.get(t.value,'MULTILINE_COMMENT')    # Check for reserved words
+    t.value = t.value[2:-2]
     return t
 
 t_PLUS    = r'\+'
@@ -97,7 +110,7 @@ def p_start(t):
     ''' start : linst'''
     t[0] = ('start',t[1])
     print(t[0])
-    #printTreeGraph(t[0])
+    printTreeGraph(t[0])
     eval_inst(t[1])
     
 def p_line(t):
@@ -238,6 +251,11 @@ def p_statement_object_call(t):
     'inst : NAME DOT inst'
     t[0] = ('class_inst_call',t[1], t[3])
 
+def p_statement_comment(t):
+    '''inst : COMMENT
+        | MULTILINE_COMMENT'''
+    t[0] = ('comment', t[1])
+
 def p_expression_binop(t):
     '''expression : expression PLUS expression
                   | expression MINUS expression
@@ -311,6 +329,7 @@ functions_value={}
 functions_void={}
 functions_scope_stack=[]
 names={}
+doc_string=open("docString.txt",'w')
 
 def eval_inst(tree, instance=None):
     print("evalInst de " + str(tree)) 
@@ -323,7 +342,7 @@ def eval_inst(tree, instance=None):
     elif tree[0] == "print":
         print(' '.join(str(x) for x in get_params_to_array(tree[1],instance)))
     elif tree[0] == "print_string":
-        print(tree[1][1:-1])
+        print(tree[1])
     elif tree[0] == 'assign_ptr':
         mutate(ctypes.cast(copy.deepcopy(get_variable_reference(tree[1])[tree[1]]), ctypes.py_object).value, eval_expr(tree[2]))
     elif tree[0] == "assign":
@@ -428,6 +447,8 @@ def eval_expr(tree, instance = None):
             return id(get_variable_reference(tree[1])[tree[1]])
         elif tree[0] == 'var_ptr':
             return ctypes.cast(get_variable_reference(tree[1])[tree[1]], ctypes.py_object).value
+        elif tree[0] == 'comment':
+            doc_string.write(tree[1]+'\n\n')
     elif type(tree) == str:
         return get_variable_reference(tree, instance)[tree]
     elif type(tree) == int:
@@ -544,10 +565,15 @@ parser = yacc.yacc()
 
 #s="x=1;print(x,2,x+2);"# Print with multiple parameters
 
-s='functionVoid increment(ptr){ print(ptr);print(*ptr);*ptr=*ptr+1; } x=6;print(&x); increment(&x); print(x);'# Make use of pointers to increment the value in a function and display the address of the variable in memory
+#s='functionVoid increment(ptr){ print(ptr);print(*ptr);*ptr=*ptr+1; } x=6;print(&x); increment(&x); print(x);'# Make use of pointers to increment the value in a function and display the address of the variable in memory
+
+s='''//print a string print(1);
+printString("AAAAAAAAAAAA");
+/*test other comment format print(1);*/''' # the code inside comments is ignored and comments are written into a file called "docString.text"
 
 #with open("1.in") as file: # Use file to refer to the file object
 
    #s = file.read()
 
 parser.parse(s)
+doc_string.close()
