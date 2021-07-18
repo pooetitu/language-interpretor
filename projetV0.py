@@ -1,4 +1,5 @@
 from genereTreeGraphviz2 import printTreeGraph
+import sys,ctypes,copy
 
 reserved = {
    'if' : 'IF',
@@ -96,7 +97,7 @@ def p_start(t):
     ''' start : linst'''
     t[0] = ('start',t[1])
     print(t[0])
-    printTreeGraph(t[0])
+    #printTreeGraph(t[0])
     eval_inst(t[1])
     
 def p_line(t):
@@ -160,6 +161,10 @@ def p_statement_for(t):
 def p_statement_assign(t):
     'inst : NAME EQUALS expression COLON'
     t[0] = ('assign', t[1], t[3])
+
+def p_statement_assign_ptr(t):
+    'inst : TIMES NAME EQUALS expression COLON'
+    t[0] = ('assign_ptr', t[2], t[4])
 
 def p_statement_print(t):
     'inst : PRINT LPAREN call_params RPAREN COLON'
@@ -265,6 +270,14 @@ def p_expression_name(t):
     'expression : NAME'
     t[0] = t[1]
 
+def p_expression_var_addr(t):
+    'expression : AND NAME'
+    t[0] = ('var_addr', t[2])
+
+def p_expression_var_ptr(t):
+    'expression : TIMES NAME'
+    t[0] = ('var_ptr', t[2])
+
 def p_expression_function_value_call(t):
     '''expression : NAME LPAREN call_params RPAREN
         | NAME LPAREN RPAREN'''
@@ -311,6 +324,8 @@ def eval_inst(tree, instance=None):
         print(' '.join(str(x) for x in get_params_to_array(tree[1],instance)))
     elif tree[0] == "print_string":
         print(tree[1][1:-1])
+    elif tree[0] == 'assign_ptr':
+        mutate(ctypes.cast(copy.deepcopy(get_variable_reference(tree[1])[tree[1]]), ctypes.py_object).value, eval_expr(tree[2]))
     elif tree[0] == "assign":
         get_variable_reference(tree[1], instance)[tree[1]]=eval_expr(tree[2], instance)
     elif tree[0] == "if":
@@ -409,6 +424,10 @@ def eval_expr(tree, instance = None):
             return len(get_variable_reference(tree[1], instance)[tree[1]])
         elif tree[0] == 'class_expr_call':
             return eval_expr(tree[2], get_variable_reference(tree[1])[tree[1]])
+        elif tree[0] == 'var_addr':
+            return id(get_variable_reference(tree[1])[tree[1]])
+        elif tree[0] == 'var_ptr':
+            return ctypes.cast(get_variable_reference(tree[1])[tree[1]], ctypes.py_object).value
     elif type(tree) == str:
         return get_variable_reference(tree, instance)[tree]
     elif type(tree) == int:
@@ -482,6 +501,14 @@ def parse_array(tree, tab=[]):
         parse_array(tree[2], tab)
     return tab
 
+def mutate(obj, new_obj):
+    if sys.getsizeof(obj) != sys.getsizeof(new_obj):
+        raise ValueError('objects must have same size')
+    mem = (ctypes.c_byte * sys.getsizeof(obj)).from_address(id(obj))
+    new_mem = (ctypes.c_byte * sys.getsizeof(new_obj)).from_address(id(new_obj))
+    for i in range(len(mem)):
+        mem[i] = new_mem[i]
+
 import ply.yacc as yacc
 parser = yacc.yacc()
 
@@ -515,7 +542,9 @@ parser = yacc.yacc()
 # cat= new Cat(); dog = new Dog(); dog.makeNoise(); cat.makeNoise(); print(dog.getX()); dog.setX(10); print(dog.getX()); print(cat.getX());''' 
 # Create mother class animal which is implemented by two subclasses dog and cat both make prints different string they doesn't share the same mother instance and dog can edit super's property
 
-s="x=1;print(x,2,x+2);"# Print with multiple parameters
+#s="x=1;print(x,2,x+2);"# Print with multiple parameters
+
+s='functionVoid increment(ptr){ print(ptr);print(*ptr);*ptr=*ptr+1; } x=6;print(&x); increment(&x); print(x);'# Make use of pointers to increment the value in a function and display the address of the variable in memory
 
 #with open("1.in") as file: # Use file to refer to the file object
 
