@@ -5,7 +5,6 @@ reserved = {
    'if' : 'IF',
    'else' : 'ELSE',
    'print' : 'PRINT',
-   'printString' : 'PRINT_STRING',
    'while' : 'WHILE',
    'for' : 'FOR',
    'functionValue' : "FONCTION_VALUE",
@@ -98,6 +97,7 @@ lexer = lex.lex()
 
 # Parsing rules
 precedence = (
+    ('left', 'LPAREN', "RPAREN"),
     ('left','PLUS','MINUS'),
     ('left','AND', 'OR', 'EQUAL', 'LOWER','HIGHER', 'LOWER_OR_EQUAL', 'HIGHER_OR_EQUAL'),
     ('left','TIMES','DIVIDE'),
@@ -110,7 +110,7 @@ def p_start(t):
     ''' start : linst'''
     t[0] = ('start',t[1])
     print(t[0])
-    printTreeGraph(t[0])
+    #printTreeGraph(t[0])
     eval_inst(t[1])
     
 def p_line(t):
@@ -182,10 +182,6 @@ def p_statement_assign_ptr(t):
 def p_statement_print(t):
     'inst : PRINT LPAREN call_params RPAREN COLON'
     t[0] = ('print',t[3])
-
-def p_statement_print_string(t):
-    'inst : PRINT_STRING LPAREN STRING RPAREN COLON'
-    t[0] = ('print_string',t[3])
 
 def p_statement_incr(t):
     'inst : NAME PLUS PLUS COLON'
@@ -288,6 +284,10 @@ def p_expression_name(t):
     'expression : NAME'
     t[0] = t[1]
 
+def p_expression_string(t):
+    'expression : STRING'
+    t[0] = ("string", t[1])
+
 def p_expression_var_addr(t):
     'expression : AND NAME'
     t[0] = ('var_addr', t[2])
@@ -313,8 +313,8 @@ def p_expression_tab_element_access(t):
     t[0] = ('array_access', t[1], t[3])
 
 def p_expression_tab_length(t):
-    'expression : LENGTH LPAREN NAME RPAREN'
-    t[0] = ('array_length', t[3])
+    'expression : LENGTH LPAREN expression RPAREN'
+    t[0] = ('length', t[3])
 
 def p_expression_object_call(t):
     'expression : NAME DOT expression'
@@ -341,8 +341,6 @@ def eval_inst(tree, instance=None):
         get_variable_reference("return")["return"] = None if tree[1] == "empty" else eval_expr(tree[1], instance)
     elif tree[0] == "print":
         print(' '.join(str(x) for x in get_params_to_array(tree[1],instance)))
-    elif tree[0] == "print_string":
-        print(tree[1])
     elif tree[0] == 'assign_ptr':
         mutate(ctypes.cast(copy.deepcopy(get_variable_reference(tree[1])[tree[1]]), ctypes.py_object).value, eval_expr(tree[2]))
     elif tree[0] == "assign":
@@ -434,21 +432,21 @@ def eval_expr(tree, instance = None):
         elif tree[0] == "function_value_call":
             load_function_params(tree, get_value_function_reference(tree[1], instance), instance)
             eval_inst(get_value_function_reference(tree[1], instance)[3], instance)
-            return_value = get_variable_reference("return")["return"]
-            functions_scope_stack.pop()
-            return return_value
+            return functions_scope_stack.pop()["return"]
         elif tree[0] == 'array':
             return parse_array(tree[1])
         elif tree[0] == 'array_access':
             return get_variable_reference(tree[1], instance)[tree[1]][tree[2]]
-        elif tree[0] == 'array_length':
-            return len(get_variable_reference(tree[1], instance)[tree[1]])
+        elif tree[0] == 'length':
+            return len(eval_expr(tree[1]))
         elif tree[0] == 'class_expr_call':
             return eval_expr(tree[2], get_variable_reference(tree[1])[tree[1]])
         elif tree[0] == 'var_addr':
             return id(get_variable_reference(tree[1])[tree[1]])
         elif tree[0] == 'var_ptr':
             return ctypes.cast(get_variable_reference(tree[1])[tree[1]], ctypes.py_object).value
+        elif tree[0] == 'string':
+            return tree[1]
     elif type(tree) == str:
         return get_variable_reference(tree, instance)[tree]
     elif type(tree) == int:
@@ -533,47 +531,54 @@ def mutate(obj, new_obj):
 import ply.yacc as yacc
 parser = yacc.yacc()
 
-#s='x=1;print(x);'
-#s='printString("Hello world");' # print string
-#s='for(i=0;i<4;i++;){print(i*i);}'# boucle for et incrementation
-#s='max=20;count=0;i=0;j=1;while(count<max){count++;print(i);tmp=j+i;i=j;j=tmp;}' # fibonnacci boucle while
-#s='functionVoid voidFunction(a,b){print(a); print(a+b);}voidFunction(1,2);' # void function with params
-#s='functionValue valueFunction(a,b){return a+b;}print(valueFunction(1,2));' # value function with params
-#s='functionVoid noParamVoidFunction(){print(10);}noParamVoidFunction();' # void function without params
-#s='functionValue noParamValueFunction(){return 10;}print(noParamValueFunction());' # value function without params
-#s='functionVoid scoppedVariable(){a=1;}scoppedVariable();print(a);' # can't access to functions scope variable finish with error
-#s='functionVoid globalVariable(){print(a);}a=1;globalVariable();' # void function without params finish with error
-#s='functionVoid returnStop(){a=1; print(1); return; print(777);}returnStop();' # void function return stops function
-#s='functionValue returnStop(){a=1;print(1);return a+1;print(777);}print(returnStop());' # value function return stops function
-#s='functionValue fibonacci(n){if(n>=2){return fibonacci(n-1) + fibonacci(n - 2);} if((n == 0) | (n == 1)){return 1;}}print(fibonacci(10));' # Recursive fibonacci function
-#s='x=0;if(x==1){printString("should not display");}else{printString("should be displayed");}' # Use of else block
-#s='x=0; if(x>=1){printString("should not display");}else if(x<=0){printString("should be displayed");}else{printString("should not display");}' # use of else if block
-#s='x=1;x+=5;print(x);'
-#s='x=1;x-=5;print(x);'
+# concat array
 
-# Newly added code
-#s='x=[5,6,7,8,9];print(x);'# Init array and print content
-#s='x=[5,6,7,8,9];print(x[1]);'# Init array and print element accessed by index
-#s='x=[5,6,7,8,9];print(length(x));'#Get size of an array
+# s='x=1;print(x);'
+# s='for(i=0;i<4;i++;){print(i*i);}'# boucle for et incrementation
+# s='max=20;count=0;i=0;j=1;while(count<max){count++;print(i);tmp=j+i;i=j;j=tmp;}' # fibonnacci boucle while
+# s='functionVoid voidFunction(a,b){print(a); print(a+b);}voidFunction(1,2);' # void function with params
+# s='functionValue valueFunction(a,b){return a+b;}print(valueFunction(1,2));' # value function with params
+# s='functionVoid noParamVoidFunction(){print(10);}noParamVoidFunction();' # void function without params
+# s='functionValue noParamValueFunction(){return 10;}print(noParamValueFunction());' # value function without params
+# s='functionVoid scoppedVariable(){a=1;}scoppedVariable();print(a);' # can't access to functions scope variable finish with error
+# s='functionVoid globalVariable(){print(a);}a=1;globalVariable();' # void function without params finish with error
+# s='functionVoid returnStop(){a=1; print(1); return; print(777);}returnStop();' # void function return stops function
+# s='functionValue returnStop(){a=1;print(1);return a+1;print(777);}print(returnStop());' # value function return stops function
+# s='functionValue fibonacci(n){if(n>=2){return fibonacci(n-1) + fibonacci(n - 2);} if((n == 0) | (n == 1)){return 1;}}print(fibonacci(10));' # Recursive fibonacci function
+# s='x=0;if(x==1){print("should not display");}else{print("should be displayed");}' # Use of else block
+# s='x=0; if(x>=1){print("should not display");}else if(x<=0){print("should be displayed");}else{print("should not display");}' # use of else if block
+# s='x=1;x+=5;print(x);'
+# s='x=1;x-=5;print(x);'
 
-#s='class Car { kilometer=0; functionValue getKilometer(){ return kilometer; } functionVoid setKilometer(value){ kilometer = value; } functionVoid move(){ setKilometer(kilometer+1); } } car= new Car(); car.move(); print(car.kilometer); car.setKilometer(5);print(car.getKilometer()); print(car);' # Define class instantiate it and call inner functions and properties
-#s='''class Animal { x=1; functionValue getX(){ return x; } }
-# class Dog extends Animal { functionVoid setX(value){super.x=value;} functionVoid makeNoise() { printString("Waf"); } }
-# class Cat extends Animal { functionVoid makeNoise() { printString("Miaou"); } }
-# cat= new Cat(); dog = new Dog(); dog.makeNoise(); cat.makeNoise(); print(dog.getX()); dog.setX(10); print(dog.getX()); print(cat.getX());''' 
-# Create mother class animal which is implemented by two subclasses dog and cat both make prints different string they doesn't share the same mother instance and dog can edit super's property
+# #Newly added code
+# #String
+# s='''print("aaaa");''' # print string
+# s='''a="aaa";b="bbb";print(a+b);'''  # concat string and print it
+# s='''a="aaa";b="bbb";print(length(a+b));'''  # concat string and print it
 
-#s="x=1;print(x,2,x+2);"# Print with multiple parameters
+# #Arrays
+# s='x=[5,6,7,8,9];print(x);'# Init array and print content
+# s='x=[5,6,7,8,9];print(x[1]);'# Init array and print element accessed by index
+# s='x=[5,6,7,8,9];print(length(x));'#Get size of an array
+# s='x=[5,6,7,8,9]; x+=[10,11,12]; print(x);'# Concatenation of array
 
-#s='functionVoid increment(ptr){ print(ptr);print(*ptr);*ptr=*ptr+1; } x=6;print(&x); increment(&x); print(x);'# Make use of pointers to increment the value in a function and display the address of the variable in memory
+# #Classes
+# s='class Car { kilometer=0; functionValue getKilometer(){ return kilometer; } functionVoid setKilometer(value){ kilometer = value; } functionVoid move(){ setKilometer(kilometer+1); } } car= new Car(); car.move(); print(car.kilometer); car.setKilometer(5);print(car.getKilometer()); print(car);' # Define class instantiate it and call inner functions and properties
+# s='''class Animal { x=1; functionValue getX(){ return x; } }
+# class Dog extends Animal { functionVoid setX(value){super.x=value;} functionVoid makeNoise() { print("Waf"); } }
+# class Cat extends Animal { functionVoid makeNoise() { print("Miaou"); } functionValue getX(){ return x+1; } }
+# cat = new Cat(); dog = new Dog(); dog.makeNoise(); cat.makeNoise(); print(dog.getX()); dog.setX(10); print(dog.getX()); print(cat.getX());''' 
+# # Create mother class animal which is implemented by two subclasses dog and cat both make prints different string they doesn't share the same mother instance and dog can edit super's property with override of function getX in cat class
 
-s='''//print a string print(1);
-printString("AAAAAAAAAAAA");
-/*test other comment format print(1);*/''' # the code inside comments is ignored and comments are written into a file called "docString.text"
+# s="x=1;print(x,2,x+2);"# Print with multiple parameters
 
-#with open("1.in") as file: # Use file to refer to the file object
+# #Pointer
+# s='functionVoid increment(ptr){ print(ptr);print(*ptr);*ptr=*ptr+1; } x=6;print(&x); increment(&x); print(x);'# Make use of pointers to increment the value in a function and display the address of the variable in memory
 
-   #s = file.read()
+# s='''//print a string print(1);
+# print("AAAAAAAAAAAA");
+# /*test other comment format print(1);*/''' # the code inside comments is ignored and comments are written into a file called "docString.text"
+
 
 parser.parse(s)
 doc_string.close()
