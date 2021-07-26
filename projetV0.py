@@ -110,7 +110,7 @@ def p_start(t):
     ''' start : linst'''
     t[0] = ('start',t[1])
     print(t[0])
-    #printTreeGraph(t[0])
+    # printTreeGraph(t[0])
     eval_inst(t[1])
     
 def p_line(t):
@@ -332,7 +332,6 @@ names={}
 doc_string=open("docString.txt",'w')
 
 def eval_inst(tree, instance=None):
-    print("evalInst de " + str(tree)) 
     if tree[0] == "bloc":
         eval_inst(tree[1], instance)
         if not (len(functions_scope_stack) > 0 and 'return' in functions_scope_stack[len(functions_scope_stack)-1]):
@@ -340,7 +339,7 @@ def eval_inst(tree, instance=None):
     elif tree[0] == "return":
         get_variable_reference("return")["return"] = None if tree[1] == "empty" else eval_expr(tree[1], instance)
     elif tree[0] == "print":
-        print(' '.join(str(x) for x in get_params_to_array(tree[1],instance)))
+        print("calc >",' '.join(str(x) for x in get_params_to_array(tree[1],instance)))
     elif tree[0] == 'assign_ptr':
         mutate(ctypes.cast(copy.deepcopy(get_variable_reference(tree[1])[tree[1]]), ctypes.py_object).value, eval_expr(tree[2]))
     elif tree[0] == "assign":
@@ -405,7 +404,6 @@ def instantiate_object(class_name):
     return obj
 
 def eval_expr(tree, instance = None):
-    print("evalExpr de " + str(tree))
     if type(tree) == tuple:
         if tree[0] == '+':
             return eval_expr(tree[1], instance) + eval_expr(tree[2], instance)
@@ -533,7 +531,7 @@ parser = yacc.yacc()
 
 # concat array
 
-# s='x=1;print(x);'
+s='x=1;print(x);'
 # s='for(i=0;i<4;i++;){print(i*i);}'# boucle for et incrementation
 # s='max=20;count=0;i=0;j=1;while(count<max){count++;print(i);tmp=j+i;i=j;j=tmp;}' # fibonnacci boucle while
 # s='functionVoid voidFunction(a,b){print(a); print(a+b);}voidFunction(1,2);' # void function with params
@@ -570,10 +568,10 @@ parser = yacc.yacc()
 # cat = new Cat(); dog = new Dog(); dog.makeNoise(); cat.makeNoise(); print(dog.getX()); dog.setX(10); print(dog.getX()); print(cat.getX());''' 
 # # Create mother class animal which is implemented by two subclasses dog and cat both make prints different string they doesn't share the same mother instance and dog can edit super's property with override of function getX in cat class
 
-# s="x=1;print(x,2,x+2);"# Print with multiple parameters
+#s="x=1;print(x,2,x+2,'salut');"# Print with multiple parameters
 
 # #Pointer
-# s='functionVoid increment(ptr){ print(ptr);print(*ptr);*ptr=*ptr+1; } x=6;print(&x); increment(&x); print(x);'# Make use of pointers to increment the value in a function and display the address of the variable in memory
+#s='functionVoid increment(ptr){ print(ptr);print(*ptr);*ptr=*ptr+1; } x=6;print(&x); increment(&x); print(x);'# Make use of pointers to increment the value in a function and display the address of the variable in memory
 
 # s='''//print a string print(1);
 # print("AAAAAAAAAAAA");
